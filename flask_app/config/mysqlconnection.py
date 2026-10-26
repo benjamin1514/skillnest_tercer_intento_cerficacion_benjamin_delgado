@@ -1,5 +1,5 @@
-# Administra conexiones MySQL
 import os
+import pymysql
 import pymysql.cursors
 from dotenv import load_dotenv
 
@@ -9,36 +9,36 @@ load_dotenv()
 class MySQLConnection:
 
     def __init__(self, db):
-        connection = pymysql.connect(
+        self.connection = pymysql.connect(
             host=os.environ.get("MYSQL_HOST"),
             user=os.environ.get("MYSQL_USER"),
             password=os.environ.get("MYSQL_PASSWORD"),
-            db=db,
+            database=db,
             charset="utf8mb4",
             cursorclass=pymysql.cursors.DictCursor,
-            autocommit=True,
+            autocommit=True
         )
-        self.connection = connection
 
     def query_db(self, query, data=None):
-        with self.connection.cursor() as cursor:
-            try:
-                print(f"Ejecutando Consulta: {query}")
+        try:
+            with self.connection.cursor() as cursor:
+                print(f"Ejecutando consulta: {query}")
                 cursor.execute(query, data)
 
-                if query.lower().find("insert") >= 0:
-                    self.connection.commit()
+                if cursor.description is not None:
+                    return cursor.fetchall()
+
+                if query.strip().lower().startswith("insert"):
                     return cursor.lastrowid
-                elif query.lower().find("select") >= 0:
-                    result = cursor.fetchall()
-                    return result
-                else:
-                    self.connection.commit()
-            except Exception as e:
-                print(f"Error en la Base de Datos: {e}")
-                return False
-            finally:
-                self.connection.close()
+
+                return cursor.rowcount
+
+        except pymysql.MySQLError as e:
+            print(f"Error en la base de datos: {e}")
+            return False
+
+        finally:
+            self.connection.close()
 
 
 def connectToMySQL(db):
